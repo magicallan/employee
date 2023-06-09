@@ -4,13 +4,16 @@
     <div class="container">
         <div class="panel panel-default">
          <div class="panel-heading">
-             <h3 class="panel-title"> 修改部门 </h3>
+             <h3 class="panel-title"> 模型攻击 </h3>
          </div>
          <div class="panel-body">
-             <form method="post">
+             <form action="{% url 'douplaod' %}" method="post" enctype="multipart/form-data">
                  {% csrf_token %}
                  <div class="form-group">
                      <label>标题</label>
+                     <input type="text" class="form-control" placeholder="文件名" name="title"/><br/><br/>
+                     <input type="file" name="pic"/><br/><br/>
+                     <input type="submit" value="上传"/>
                      <input type="text" class="form-control" placeholder="标题" name="title" value="{{ row_object.title }}"/>
                  </div>
 

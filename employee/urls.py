@@ -19,12 +19,17 @@ from django.urls import path
 from app01 import views
 
 urlpatterns = [
+    path('register/', views.register),
     path('', views.login),
     # 部门管理
     path('depart/list/', views.depart_list),
     path('depart/add/', views.depart_add),
     path('depart/delete/', views.depart_delete),
-    path('depart/<int:nid>/edit/', views.depart_edit),
+    path('depart/<int:nid>/use/', views.depart_use),
+    # 上传文件
+    path('upload/', views.upload),
+    path('imgupload/', views.img_upload),
+    path('ptupload/', views.pt_upload),
     # 用户管理
     path('user/list/', views.user_list),
     path('user/add/', views.user_add),

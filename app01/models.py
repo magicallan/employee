@@ -15,15 +15,14 @@ class UserInfo(models.Model):
     account = models.DecimalField(verbose_name="账户余额", max_digits=10, decimal_places=2, default=0)
     creat_time = models.DateField(verbose_name="入职时间")
     # 级联删除
-    depart = models.ForeignKey(verbose_name="部门", to="Department", to_field="id", on_delete=models.CASCADE)
+    depart = models.ForeignKey(verbose_name="部门", to="app01.Department", to_field="id", on_delete=models.CASCADE)
     # 删除置空
     # depart = models.ForeignKey(to="Department", to_field="id", null=True, blank=True, on_delete=models.SET_NULL)
 
 
 class Department(models.Model):
-    """部门表"""
+    """模型表"""
     title = models.CharField(verbose_name='标题', max_length=32)
-
     def __str__(self):
         return self.title
 
