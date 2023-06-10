@@ -17,28 +17,36 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from app01 import views
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.contrib import staticfiles
+from django.contrib.staticfiles.urls import static
+from . import settings
+
 
 urlpatterns = [
-    path('register/', views.register),
     path('', views.login),
+    path('register/', views.register),
     # 部门管理
-    path('depart/list/', views.depart_list),
-    path('depart/add/', views.depart_add),
-    path('depart/delete/', views.depart_delete),
-    path('depart/<int:nid>/use/', views.depart_use),
+    path('model/list/', views.model_list),
+    path('model/add/', views.model_add),
+    path('model/delete/', views.model_delete),
+    path('model/<int:nid>/use/', views.model_use),
     # 上传文件
     path('upload/', views.upload),
-    path('imgupload/', views.img_upload),
-    path('ptupload/', views.pt_upload),
+    path('img/upload/', views.img_upload),
     # 用户管理
     path('user/list/', views.user_list),
     path('user/add/', views.user_add),
     path('user/<int:nid>/edit/', views.user_edit),
     path('user/<int:nid>/delete', views.user_delete),
+    # 调用模型
+    path('use', views.use),
     # 靓号管理
     path('pnum/list/', views.pnum_list),
     path('pnum/add/', views.pnum_add),
     path('pnum/<int:nid>/edit', views.pnum_edit),
     path('pnum/<int:nid>/delete', views.pnum_delete),
+    path('model/<int:nid>/use/use/', views.use)
+
 
 ]

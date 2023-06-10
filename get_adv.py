@@ -20,7 +20,7 @@ def get_adv(model, image):
 
     # 定义预处理转换
     preprocess = transforms.Compose([
-        transforms.Resize((50, 50)),  # 调整图片尺寸为模型输入大小
+        transforms.Resize((250, 250)),  # 调整图片尺寸为模型输入大小
         transforms.ToTensor(),  # 转换为张量
     ])
 
@@ -44,6 +44,6 @@ def get_adv(model, image):
     perturbed_data = perturbed_data.squeeze().detach().cpu().numpy()
     perturbed_data = np.transpose(perturbed_data, (1, 2, 0))
 
-    plt.imsave('./app01/staticc/img/adv_image.jpeg', perturbed_data)
-    image = Image.open('./app01/staticc/img/adv_image.jpeg').convert("RGB")
+    plt.imsave('./app01/static/gc_image/adv_image.jpeg', perturbed_data)
+    image = Image.open('./app01/static/gc_image/adv_image.jpeg').convert("RGB")
     return image

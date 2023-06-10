@@ -16,6 +16,8 @@
     <content url="file://$MODULE_DIR$" />
     <orderEntry type="jdk" jdkName="py39_torch_gpu" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="boot_reg_a65c431" level="application" />
+    <orderEntry type="library" name="reg_new_ccb052b" level="application" />
   </component>
   <component name="TemplatesService">
     <option name="TEMPLATE_CONFIGURATION" value="Django" />

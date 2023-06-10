@@ -1,50 +1,96 @@
+from __future__ import print_function
+
 from django.shortcuts import render, redirect, HttpResponse
 from app01 import models
 from django import forms
+from app01.utils.pagination import Pagination
+import torch
+from PIL import Image
+from get_adv import get_adv
 from django.core.validators import RegexValidator
-from django.utils.safestring import mark_safe
 
 
 # Create your views here.
 def register(request):
-    return render(request, 'register.html')
+    if request.method == "GET":
+        form = UserModelForm()
+        return render(request, 'register.html', {"form": form})
+
+    form = UserModelForm(data=request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect("/model/list/")
+
+    return render(request, 'register.html', {"form": form})
 
 
 def login(request):
-    return render(request, 'login.html')
-
-
-def depart_list(request):
-    """部门列表"""
-    queryset = models.Department.objects.all()
-
-    return render(request, 'depart_list.html', {"queryset": queryset})
-
-
-def depart_add(request):
-    """添加部门"""
     if request.method == "GET":
-        return render(request, 'depart_add.html')
+        return render(request, 'login.html')
+
+    email = request.POST.get("email")
+    password = request.POST.get("password")
+    exists = models.UserInfo.objects.filter(email=email).exists()
+    if not exists:
+        e_error = "该用户不存在"
+        return render(request, 'login.html', {"e_error": e_error})
+    user = models.UserInfo.objects.filter(email=email).first()
+    if password != user.password:
+        p_error = "输入密码不正确"
+        return render(request, 'login.html', {"p_error": p_error})
+    return redirect("/model/list/")
+
+
+def model_list(request):
+    """模型列表"""
+    queryset = models.AImodel.objects.all()
+    page_object = Pagination(request, queryset, page_size=5)
+    content = {
+        "queryset": page_object.page_queryset,
+        "page_string": page_object.html(),
+    }
+    return render(request, 'model_list.html', content)
+
+
+def model_add(request):
+    """添加模型"""
+    if request.method == "GET":
+        return render(request, 'model_add.html')
+
+    my_file = request.FILES.get("pt", None)
+    if not my_file:
+        error = "上传失败！"
+        return render(request, 'model_add.html', {"error": error})
     title = request.POST.get("title")
-    models.Department.objects.create(title=title)
-    return redirect("/depart/list/")
+    destination = open(f"./app01/static/model/{title}.pt", "wb+")
+    for chunk in my_file.chunks():
+        destination.write(chunk)
+    destination.close()
+    models.AImodel.objects.create(title=title)
+    return redirect("/model/list/")
 
 
-def depart_delete(request):
-    """删除部门"""
+def model_delete(request):
+    """删除模型"""
     nid = request.GET.get('nid')
-    models.Department.objects.filter(id=nid).delete()
-    return redirect("/depart/list/")
+    models.AImodel.objects.filter(id=nid).delete()
+    return redirect("/model/list/")
 
 
-def depart_use(request, nid):
-    # """编辑部门"""
+def model_use(request, nid):
     if request.method == "GET":
-        row_object = models.Department.objects.filter(id=nid).first()
-        return render(request, 'depart_use.html', {"row_object": row_object})
-    # title = request.POST.get("title")
-    # models.Department.objects.filter(id=nid).update(title=title)
-    # return redirect("/depart/list/")
+        return render(request, 'model_use.html')
+
+    my_file = request.FILES.get("pic", None)
+    if not my_file:
+        error = "上传失败！"
+        return render(request, 'model_use.html', {"error": error})
+    title = request.POST.get("title")
+    destination = open(f"./app01/static/img/{title}.jpg", "wb+")
+    for chunk in my_file.chunks():
+        destination.write(chunk)
+    destination.close()
+    return redirect(request.path + "use")
 
 
 # 加载文件上传表单
@@ -61,36 +107,51 @@ def img_upload(request):
     for chunk in my_file.chunks():
         destination.write(chunk)
     destination.close()
-
     return HttpResponse("上传的文件:")
 
-def pt_upload(request):
-    my_file = request.FILES.get("pic", None)
-    if not my_file:
-        return HttpResponse("没有上传的文件信息")
-    destination = open("./app01/static/model/a.pt", "wb+")
-    for chunk in my_file.chunks():
-        destination.write(chunk)
-    destination.close()
 
-    return HttpResponse("上传的文件:")
+def use(request, nid):
+    print(request.path)
+    pretrained_model = "./app01/static/model/a.pt"
+    model = torch.load(pretrained_model, map_location="cpu")
+
+    # 设置为验证模式.
+    model.eval()
+    image_path = "./app01/static/img/a.jpg"
+    image = Image.open(image_path).convert("RGB")  # 加载图片并转换为RGB格式
+    adv_image = get_adv(model, image)
+    # adv_image.show()
+    # return redirect("/model/" + str(nid) + "/use/")
+    return send
 
 
 def user_list(request):
     queryset = models.UserInfo.objects.all()
-    return render(request, 'user_list.html', {"queryset": queryset})
+    page_object = Pagination(request, queryset, page_size=5)
+    content = {
+        "queryset": page_object.page_queryset,
+        "page_string": page_object.html(),
+    }
+    return render(request, 'user_list.html', content)
 
 
 class UserModelForm(forms.ModelForm):
+    confirm_password = forms.CharField(
+        label="确认密码",
+        widget=forms.PasswordInput
+    )
+
     class Meta:
         model = models.UserInfo
-        fields = ["name", "password", "age", "gender", "account", "creat_time", "depart"]
+        fields = ["name", "email", "password", "confirm_password"]
+        widgets = {
+            "password": forms.PasswordInput,
+            "confirm_password": forms.PasswordInput
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
-            # if name == "password":
-            #     field.widget.
             field.widget.attrs = {"class": "form-control", "placeholder": field.label}
 
 
@@ -132,32 +193,19 @@ def pnum_list(request):
     search_data = request.GET.get('q', "")
     if search_data:
         data_dict["mobile__contains"] = search_data
-
-    page = int(request.GET.get('page', 1))
-    page_size = 10  # 每页显示数据
-    start = (page - 1) * page_size
-    end = page * page_size
-    queryset = models.PrettyNum.objects.filter(**data_dict).order_by("-level")[start:end]
-    # 数据总条数
-    total_count = models.PrettyNum.objects.filter(**data_dict).order_by("-level").count()
-    # 总页码
-    total_page_count, div = divmod(total_count, page_size)
-    if div:
-        total_page_count += 1
-
-    page_str_list = []
-    for i in range(1, total_page_count + 1):
-        ele = '<li><a href="?page={}">{}</a></li>'.format(i, i)
-        page_str_list.append(ele)
-    page_string = mark_safe("".join(page_str_list))
-    return render(request, 'pnum_list.html',
-                  {"queryset": queryset, "search_data": search_data, "page_string": page_string}
-                  )
+    queryset = models.Pnum.objects.filter(**data_dict).order_by("-level")
+    page_object = Pagination(request, queryset)
+    context = {
+        "search_data": search_data,
+        "queryset": page_object.page_queryset,
+        "page_string": page_object.html()
+    }
+    return render(request, 'pnum_list.html', context)
 
 
 class PrettyModelForm(forms.ModelForm):
     class Meta:
-        model = models.PrettyNum
+        model = models.Pnum
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
@@ -168,7 +216,7 @@ class PrettyModelForm(forms.ModelForm):
     # 验证：方式2
     def clean_mobile(self):
         txt_mobile = self.cleaned_data["mobile"]
-        exists = models.PrettyNum.objects.filter(mobile=txt_mobile).exists()
+        exists = models.Pnum.objects.filter(mobile=txt_mobile).exists()
         if exists:
             raise forms.ValidationError("手机号已存在")
         if len(txt_mobile) != 11:
@@ -192,7 +240,7 @@ def pnum_add(request):
 class PrettyEditModelForm(forms.ModelForm):
     # mobile = forms.CharField(disabled=True, label="手机号")
     class Meta:
-        model = models.PrettyNum
+        model = models.Pnum
         fields = ['mobile', 'price', 'level', 'status']
 
     def __init__(self, *args, **kwargs):
@@ -202,7 +250,7 @@ class PrettyEditModelForm(forms.ModelForm):
 
     def clean_mobile(self):
         txt_mobile = self.cleaned_data["mobile"]
-        exists = models.PrettyNum.objects.exclude(id=self.instance.pk).filter(mobile=txt_mobile).exists()
+        exists = models.Pnum.objects.exclude(id=self.instance.pk).filter(mobile=txt_mobile).exists()
         if exists:
             raise forms.ValidationError("手机号已存在")
         if len(txt_mobile) != 11:
@@ -211,7 +259,7 @@ class PrettyEditModelForm(forms.ModelForm):
 
 
 def pnum_edit(request, nid):
-    row_object = models.PrettyNum.objects.filter(id=nid).first()
+    row_object = models.Pnum.objects.filter(id=nid).first()
     if request.method == "GET":
         form = PrettyEditModelForm(instance=row_object)
         return render(request, 'pnum_edit.html', {"form": form})
@@ -225,5 +273,5 @@ def pnum_edit(request, nid):
 
 
 def pnum_delete(request, nid):
-    models.PrettyNum.objects.filter(id=nid).delete()
+    models.Pnum.objects.filter(id=nid).delete()
     return redirect("/pnum/list/")
